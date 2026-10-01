@@ -93,3 +93,7 @@ type VersionReq struct {
 type GetNewImageReq struct {
 	ImageNameAndTag string `json:"image_name_and_tag"`
 }
+
+type ImageChangelogReq struct {
+	Id string `path:"id"`
+}

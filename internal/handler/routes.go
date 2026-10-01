@@ -130,6 +130,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/images",
 				Handler: image.ImagesListHandler(serverCtx),
 			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/image/:id/changelog",
+				Handler: image.ChangelogHandler(serverCtx),
+			},
 		},
 		rest.WithJwt(serverCtx.Config.Auth.AccessSecret),
 		rest.WithPrefix("/api"),

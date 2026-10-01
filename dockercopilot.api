@@ -91,6 +91,10 @@ type VersionReq {
 	Type string `form:"type"`
 }
 
+type ImageChangelogReq {
+	Id string `path:"id"`
+}
+
 service dockerCopilot {
 	@handler webindex
 		get /
@@ -166,6 +170,9 @@ service dockerCopilot {
 
 	@handler remove
 	delete /image/:id (RemoveImageReq) returns (Resp)
+
+	@handler imageChangelog
+	get /image/:id/changelog (ImageChangelogReq) returns (Resp)
 }
 
 @server(
