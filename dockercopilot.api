@@ -95,6 +95,11 @@ type ImageChangelogReq {
 	Id string `path:"id"`
 }
 
+type SaveRepoMapReq {
+	ImageName string `json:"imageName"`
+	Repo      string `json:"repo"`
+}
+
 service dockerCopilot {
 	@handler webindex
 		get /
@@ -173,6 +178,9 @@ service dockerCopilot {
 
 	@handler imageChangelog
 	get /image/:id/changelog (ImageChangelogReq) returns (Resp)
+
+	@handler saveRepoMap
+	post /image/repoMap (SaveRepoMapReq) returns (Resp)
 }
 
 @server(

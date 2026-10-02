@@ -97,3 +97,8 @@ type GetNewImageReq struct {
 type ImageChangelogReq struct {
 	Id string `path:"id"`
 }
+
+type SaveRepoMapReq struct {
+	ImageName string `json:"imageName"`
+	Repo      string `json:"repo"`
+}

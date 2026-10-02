@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -106,10 +108,11 @@ func normalizeGitHubRepo(raw string) string {
 }
 
 // SourceRepoCandidates 生成源仓库候选列表（按可信度排序）：
-// 1. 镜像 label 声明的仓库
-// 2. ghcr.io 镜像路径通常等于 GitHub 仓库路径
-// 3. 常见镜像映射表
-// 4. Docker Hub 的 owner/name 猜测（作者名常与 GitHub 同名）；linuxserver 系列套用其命名规律
+// 1. 用户手动指定的仓库（弹窗里填写，最高优先级）
+// 2. 镜像 label 声明的仓库
+// 3. ghcr.io 镜像路径通常等于 GitHub 仓库路径
+// 4. 常见镜像映射表
+// 5. Docker Hub 的 owner/name 猜测（作者名常与 GitHub 同名）；linuxserver 系列套用其命名规律
 func SourceRepoCandidates(imageName string, labels map[string]string) []string {
 	var candidates []string
 	add := func(s string) {
@@ -124,6 +127,7 @@ func SourceRepoCandidates(imageName string, labels map[string]string) []string {
 		candidates = append(candidates, s)
 	}
 
+	add(UserRepoOverride(imageName))
 	add(GetSourceRepo(labels))
 
 	named, err := ref.ParseDockerRef(imageName)
@@ -197,6 +201,34 @@ func FetchChangelog(repo string) (*ChangelogData, error) {
 	return data, nil
 }
 
+var (
+	htmlTableRe = regexp.MustCompile(`(?is)<table.*?</table>`)
+	htmlTagRe   = regexp.MustCompile(`<[^>]*>`)
+	blankLinesRe = regexp.MustCompile(`\n{3,}`)
+)
+
+// cleanReleaseBody 清理 Release 正文：很多项目往说明里塞下载链接表格和徽章图片，
+// 这类 HTML 在弹窗里没法读。整块表格替换成提示，其余 HTML 标签剥掉，只留更新内容。
+func cleanReleaseBody(body string) string {
+	if body == "" {
+		return ""
+	}
+	tableCount := len(htmlTableRe.FindAllString(body, -1))
+	body = htmlTableRe.ReplaceAllString(body, "")
+	body = htmlTagRe.ReplaceAllString(body, "")
+	body = html.UnescapeString(body)
+	body = strings.ReplaceAll(body, "\r\n", "\n")
+	body = blankLinesRe.ReplaceAllString(body, "\n\n")
+	body = strings.TrimSpace(body)
+	if tableCount > 0 {
+		if body != "" {
+			body += "\n\n"
+		}
+		body += "（正文中的下载链接表格已省略，可点下方「在 GitHub 查看原文」）"
+	}
+	return body
+}
+
 func fetchReleases(repo string) (*ChangelogData, error) {
 	apiURL := "https://api.github.com/repos/" + repo + "/releases?per_page=5"
 	body, err := apiGet(apiURL)
@@ -224,7 +256,7 @@ func fetchReleases(repo string) (*ChangelogData, error) {
 		info := ReleaseInfo{
 			TagName:     r.TagName,
 			Name:        r.Name,
-			Body:        r.Body,
+			Body:        cleanReleaseBody(r.Body),
 			PublishedAt: r.PublishedAt,
 			URL:         r.HTMLURL,
 		}
