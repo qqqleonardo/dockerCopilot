@@ -62,6 +62,20 @@ func (l *ChangelogLogic) Changelog(req *types.ImageChangelogReq) (resp *types.Re
 			lastErr = fetchErr // 限流等真实错误，直接报给用户
 			break
 		}
+		var releases []module.ReleaseInfo
+		releases = data.Releases
+		if module.AIEnabled() {
+			if translated, aiErr := module.TranslateBatch(data.Repo, data.Releases); aiErr != nil {
+				l.Errorf("AI 翻译失败，回退原文: %v", aiErr)
+			} else {
+				releases = make([]module.ReleaseInfo, len(data.Releases))
+				for i, r := range data.Releases {
+					releases[i] = r
+					releases[i].BodyZh = translated[r.TagName]
+				}
+			}
+		}
+
 		resp.Code = 200
 		resp.Msg = "success"
 		resp.Data = map[string]interface{}{
@@ -69,7 +83,7 @@ func (l *ChangelogLogic) Changelog(req *types.ImageChangelogReq) (resp *types.Re
 			"kind":           data.Kind,
 			"imageId":        imageID,
 			"currentVersion": currentVersion,
-			"releases":       data.Releases,
+			"releases":       releases,
 		}
 		return resp, nil
 	}

@@ -22,6 +22,7 @@ type ReleaseInfo struct {
 	TagName     string `json:"tagName"`
 	Name        string `json:"name"`
 	Body        string `json:"body"`
+	BodyZh      string `json:"bodyZh,omitempty"` // AI 中文翻译（配置 AI_API_KEY 后才有）
 	PublishedAt string `json:"publishedAt"`
 	URL         string `json:"url"`
 }
